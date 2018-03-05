@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import CloudKit
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -16,6 +18,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        application.registerForRemoteNotifications()
         return true
     }
 
@@ -44,3 +47,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 }
 
+extension AppDelegate {
+    func application(_ application: UIApplication, userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShareMetadata) {
+        let acceptSharesOperation = CKAcceptSharesOperation(shareMetadatas: [cloudKitShareMetadata])
+        acceptSharesOperation.perShareCompletionBlock = { metadata, share, error in
+            guard error == nil else {
+                print(error!.localizedDescription)
+                return
+            }
+            CloudKitSupport.shared.acceptShare(for: metadata)
+        }
+        CKContainer(identifier: cloudKitShareMetadata.containerIdentifier).add(acceptSharesOperation)
+    }
+    
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        let notification = CKNotification(fromRemoteNotificationDictionary: userInfo)
+        guard application.applicationState != .inactive else {return}
+        
+        let notificationType = notification.notificationType
+        if notificationType == .query {
+            let queryNotification = notification as! CKQueryNotification
+            CloudKitSupport.shared.handleQueryNotification(queryNotification)
+        }
+        completionHandler(UIBackgroundFetchResult.newData)
+    }
+}

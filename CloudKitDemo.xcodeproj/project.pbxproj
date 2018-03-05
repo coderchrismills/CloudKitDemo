@@ -12,6 +12,9 @@
 		837651E2204B7D2800E7B0EA /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 837651E0204B7D2800E7B0EA /* Main.storyboard */; };
 		837651E4204B7D2800E7B0EA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 837651E3204B7D2800E7B0EA /* Assets.xcassets */; };
 		837651E7204B7D2800E7B0EA /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 837651E5204B7D2800E7B0EA /* LaunchScreen.storyboard */; };
+		837651F1204B7D3600E7B0EA /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 837651F0204B7D3600E7B0EA /* CloudKit.framework */; };
+		837651F3204B83E800E7B0EA /* CloudKitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651F2204B83E800E7B0EA /* CloudKitSupport.swift */; };
+		837651F5204BA13400E7B0EA /* UIImage+Save.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651F4204BA13400E7B0EA /* UIImage+Save.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +25,10 @@
 		837651E3204B7D2800E7B0EA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		837651E6204B7D2800E7B0EA /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		837651E8204B7D2800E7B0EA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		837651EE204B7D3300E7B0EA /* CloudKitDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CloudKitDemo.entitlements; sourceTree = "<group>"; };
+		837651F0204B7D3600E7B0EA /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
+		837651F2204B83E800E7B0EA /* CloudKitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSupport.swift; sourceTree = "<group>"; };
+		837651F4204BA13400E7B0EA /* UIImage+Save.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Save.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -29,6 +36,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				837651F1204B7D3600E7B0EA /* CloudKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -40,6 +48,7 @@
 			children = (
 				837651DB204B7D2800E7B0EA /* CloudKitDemo */,
 				837651DA204B7D2800E7B0EA /* Products */,
+				837651EF204B7D3600E7B0EA /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -54,14 +63,25 @@
 		837651DB204B7D2800E7B0EA /* CloudKitDemo */ = {
 			isa = PBXGroup;
 			children = (
+				837651EE204B7D3300E7B0EA /* CloudKitDemo.entitlements */,
 				837651DC204B7D2800E7B0EA /* AppDelegate.swift */,
 				837651DE204B7D2800E7B0EA /* ViewController.swift */,
+				837651F2204B83E800E7B0EA /* CloudKitSupport.swift */,
+				837651F4204BA13400E7B0EA /* UIImage+Save.swift */,
 				837651E0204B7D2800E7B0EA /* Main.storyboard */,
 				837651E3204B7D2800E7B0EA /* Assets.xcassets */,
 				837651E5204B7D2800E7B0EA /* LaunchScreen.storyboard */,
 				837651E8204B7D2800E7B0EA /* Info.plist */,
 			);
 			path = CloudKitDemo;
+			sourceTree = "<group>";
+		};
+		837651EF204B7D3600E7B0EA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				837651F0204B7D3600E7B0EA /* CloudKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -97,6 +117,17 @@
 					837651D8204B7D2800E7B0EA = {
 						CreatedOnToolsVersion = 9.2;
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.iCloud = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -136,6 +167,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				837651F5204BA13400E7B0EA /* UIImage+Save.swift in Sources */,
+				837651F3204B83E800E7B0EA /* CloudKitSupport.swift in Sources */,
 				837651DF204B7D2800E7B0EA /* ViewController.swift in Sources */,
 				837651DD204B7D2800E7B0EA /* AppDelegate.swift in Sources */,
 			);
@@ -274,9 +307,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CloudKitDemo/CloudKitDemo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = K2DYHV494C;
 				INFOPLIST_FILE = CloudKitDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.coderchrismills.CloudKitDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -289,9 +324,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CloudKitDemo/CloudKitDemo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = K2DYHV494C;
 				INFOPLIST_FILE = CloudKitDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.coderchrismills.CloudKitDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
