@@ -11,6 +11,7 @@ import UIKit
 
 struct CKIdentifiers {
     static let house = "House"
+    static let sharedHouse = "SharedHouse"
     static let houseZone = "HouseZone"
     static let address = "address"
     static let comments = "comments"
@@ -87,10 +88,13 @@ class CloudKitSupport {
     
     func subscribeToRemoteNotifications() {
         let predicate = NSPredicate(value: true)
+        let options: CKQuerySubscriptionOptions = [.firesOnRecordCreation, .firesOnRecordUpdate, .firesOnRecordDeletion]
         let subscription = CKQuerySubscription(recordType: CKIdentifiers.house,
                                                predicate: predicate,
-                                               options: [.firesOnRecordCreation, .firesOnRecordUpdate, .firesOnRecordDeletion])
+                                               subscriptionID: CKIdentifiers.house,
+                                               options: options)
         let notificationInfo = CKNotificationInfo()
+        notificationInfo.shouldSendContentAvailable = true
         subscription.notificationInfo = notificationInfo
 
         privateDatabase.save(subscription) { record, error in
@@ -101,12 +105,25 @@ class CloudKitSupport {
             print("Save record subscription")
         }
         
-        sharedDatabase.save(subscription) { record, error in
+        let dbSubscription = CKDatabaseSubscription(subscriptionID: CKIdentifiers.houseZone)
+        dbSubscription.notificationInfo = notificationInfo
+        privateDatabase.save(dbSubscription) { record, error in
             if let err = error {
                 print(err.localizedDescription)
                 return
             }
-            print("Save record subscription")
+            print("Save database subscription")
+        }
+        
+        let sharedSubscription = CKDatabaseSubscription(subscriptionID: CKIdentifiers.sharedHouse)
+        sharedSubscription.notificationInfo = notificationInfo
+        
+        sharedDatabase.save(sharedSubscription) { record, error in
+            if let err = error {
+                print(err.localizedDescription)
+                return
+            }
+            print("Save shared database subscription")
         }
 
     }
@@ -152,7 +169,9 @@ class CloudKitSupport {
     func update(_ house: House) {
         guard let record = currentRecord else { return }
         
-        let database = record.share == nil ? privateDatabase : sharedDatabase
+        let isShared = record.share != nil
+        let isOwner = record.recordID.zoneID.ownerName == CKCurrentUserDefaultName
+        let database = (isShared && !isOwner) ? sharedDatabase : privateDatabase
         record.setObject(house.address as CKRecordValue?, forKey: CKIdentifiers.address)
         record.setObject(house.comments as CKRecordValue?, forKey: CKIdentifiers.comments)
         
@@ -190,6 +209,20 @@ class CloudKitSupport {
     func query(address: String, onCompletion: @escaping (CKRecord)->()) {
         let predicate = NSPredicate(format: "address = %@", address)
         let query = CKQuery(recordType: CKIdentifiers.house, predicate: predicate)
+        
+        privateDatabase.perform(query, inZoneWith: recordZone.zoneID) { results, error in
+            if error != nil {
+                print(error!.localizedDescription)
+            } else {
+                guard let results = results else { return }
+                guard results.count > 0 else { return }
+                
+                let record = results[0]
+                self.currentRecord = record
+                onCompletion(record)
+            }
+        }
+        
         guard let zid = sharedZone?.zoneID else { return }
         sharedDatabase.perform(query, inZoneWith: zid) { results, error in
             guard error == nil else {
@@ -209,6 +242,36 @@ class CloudKitSupport {
     func handleQueryNotification(_ notification: CKQueryNotification) {
         guard let recordID = notification.recordID else { return }
         fetch(for: recordID, shared: notification.databaseScope == .shared)
+    }
+    
+    func handleDatabaseNotification(_ notification: CKDatabaseNotification) {
+        guard notification.databaseScope == .shared else { return }
+
+        let dbChanges = CKFetchDatabaseChangesOperation()
+        dbChanges.fetchAllChanges = true
+        dbChanges.fetchDatabaseChangesCompletionBlock = { token, _, error in
+            if error != nil {
+                print(error!.localizedDescription)
+                //return
+            }
+        }
+        
+        dbChanges.recordZoneWithIDChangedBlock = { recordZoneId in
+            let zoneChanges = CKFetchRecordZoneChangesOperation(recordZoneIDs: [recordZoneId])
+            zoneChanges.fetchRecordZoneChangesCompletionBlock = { error in
+                if error != nil {
+                    print(error!.localizedDescription)
+                    //return
+                }
+            }
+            zoneChanges.fetchAllChanges = true
+            zoneChanges.recordChangedBlock = { record in
+                self.currentRecord = record
+                NotificationCenter.default.post(name: .onRecordFetchComplete, object: nil)
+            }
+            self.sharedDatabase.add(zoneChanges)
+        }
+        sharedDatabase.add(dbChanges)
     }
     
     func fetchRecordZones(for database: CKDatabase, onCompletion: @escaping ([CKRecordZone])->()) {

@@ -68,7 +68,11 @@ extension AppDelegate {
         if notificationType == .query {
             let queryNotification = notification as! CKQueryNotification
             CloudKitSupport.shared.handleQueryNotification(queryNotification)
+        } else if notificationType == .database {
+            let recordNotification = notification as! CKDatabaseNotification
+            CloudKitSupport.shared.handleDatabaseNotification(recordNotification)
         }
+        
         completionHandler(UIBackgroundFetchResult.newData)
     }
 }
