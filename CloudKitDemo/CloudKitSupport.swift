@@ -244,34 +244,43 @@ class CloudKitSupport {
         fetch(for: recordID, shared: notification.databaseScope == .shared)
     }
     
+    var changeToken: CKServerChangeToken?
+    var recordChangeToken: CKServerChangeToken?
     func handleDatabaseNotification(_ notification: CKDatabaseNotification) {
-        guard notification.databaseScope == .shared else { return }
-
+        let database = notification.databaseScope == .shared ? sharedDatabase : privateDatabase
+        
         let dbChanges = CKFetchDatabaseChangesOperation()
         dbChanges.fetchAllChanges = true
+        dbChanges.previousServerChangeToken = changeToken
         dbChanges.fetchDatabaseChangesCompletionBlock = { token, _, error in
             if error != nil {
                 print(error!.localizedDescription)
                 //return
             }
+            self.changeToken = token
         }
         
         dbChanges.recordZoneWithIDChangedBlock = { recordZoneId in
-            let zoneChanges = CKFetchRecordZoneChangesOperation(recordZoneIDs: [recordZoneId])
+            let options = CKFetchRecordZoneChangesOptions()
+            options.previousServerChangeToken = self.recordChangeToken
+            let zoneChanges = CKFetchRecordZoneChangesOperation(recordZoneIDs: [recordZoneId], optionsByRecordZoneID: [recordZoneId:options])
             zoneChanges.fetchRecordZoneChangesCompletionBlock = { error in
                 if error != nil {
                     print(error!.localizedDescription)
                     //return
                 }
             }
-            zoneChanges.fetchAllChanges = true
+            zoneChanges.fetchAllChanges = false
+            zoneChanges.recordZoneChangeTokensUpdatedBlock = { _, token, _ in
+                self.recordChangeToken = token
+            }
             zoneChanges.recordChangedBlock = { record in
                 self.currentRecord = record
                 NotificationCenter.default.post(name: .onRecordFetchComplete, object: nil)
             }
-            self.sharedDatabase.add(zoneChanges)
+            database.add(zoneChanges)
         }
-        sharedDatabase.add(dbChanges)
+        database.add(dbChanges)
     }
     
     func fetchRecordZones(for database: CKDatabase, onCompletion: @escaping ([CKRecordZone])->()) {
