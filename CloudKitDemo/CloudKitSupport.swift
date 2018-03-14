@@ -9,48 +9,10 @@
 import CloudKit
 import UIKit
 
-struct CKIdentifiers {
-    static let house = "House"
-    static let sharedHouse = "SharedHouse"
-    static let houseZone = "HouseZone"
-    static let address = "address"
-    static let comments = "comments"
-    static let photo = "photo"
-}
-
-class House {
-    var address: String = ""
-    var comments: String = ""
-    var photoURL: URL?
-    var recordID: CKRecordID?
-    var isShared: Bool = false
-    
-    init() { }
-    init(address: String, comments: String, photoURL: URL?) {
-        self.address = address
-        self.comments = comments
-        self.photoURL = photoURL
-    }
-    
-    func update(with record: CKRecord?) {
-        guard let record = record else { return }
-        
-        recordID = record.recordID
-        isShared = record.share != nil
-        
-        if let address = record.object(forKey: CKIdentifiers.address) as? String {
-            self.address = address
-        }
-        
-        if let comments = record.object(forKey: CKIdentifiers.comments) as? String {
-            self.comments = comments
-        }
-
-        guard let photo = record.object(forKey: CKIdentifiers.photo) as? CKAsset else { return }
-        guard let image = UIImage(contentsOfFile: photo.fileURL.path) else { return }
-        
-        self.photoURL = image.saveToFile()
-    }
+struct CKSubscriptionIdentifiers {
+    static let privateDatabase = "Private"
+    static let sharedDatabase = "Shared"
+    static let customZone = "CustomZone"
 }
 
 extension Notification.Name {
@@ -64,81 +26,67 @@ class CloudKitSupport {
     var privateDatabase: CKDatabase
     var sharedDatabase: CKDatabase
     var recordZone: CKRecordZone
-    
     var sharedZone: CKRecordZone?
-    var currentRecord: CKRecord?
     
     private init() {
         privateDatabase = container.privateCloudDatabase
         sharedDatabase = container.sharedCloudDatabase
-        recordZone = CKRecordZone(zoneName: CKIdentifiers.houseZone)
+        recordZone = CKRecordZone(zoneName: CKSubscriptionIdentifiers.customZone)
     }
     
-    func initialize() {
+    func initialize(onCompletion: @escaping ()->()) {
         privateDatabase.save(recordZone) { (recordzone, error) in
-            if let err = error {
-                print(err.localizedDescription)
-                return
-            }
+            guard CloudKitError.shared.handle(error: error, operation: .modifyZones, alert: true) == nil else { return }
             print("Save record zone")
+            onCompletion();
+            self.subscribeToRemoteNotifications()
         }
-        
-        subscribeToRemoteNotifications()
     }
     
     func subscribeToRemoteNotifications() {
         let predicate = NSPredicate(value: true)
         let options: CKQuerySubscriptionOptions = [.firesOnRecordCreation, .firesOnRecordUpdate, .firesOnRecordDeletion]
-        let subscription = CKQuerySubscription(recordType: CKIdentifiers.house,
-                                               predicate: predicate,
-                                               subscriptionID: CKIdentifiers.house,
-                                               options: options)
+        
         let notificationInfo = CKNotificationInfo()
         notificationInfo.shouldSendContentAvailable = true
-        subscription.notificationInfo = notificationInfo
-
-        privateDatabase.save(subscription) { record, error in
-            if let err = error {
-                print(err.localizedDescription)
-                return
-            }
-            print("Save record subscription")
-        }
         
-        let dbSubscription = CKDatabaseSubscription(subscriptionID: CKIdentifiers.houseZone)
+        let types = [Schema.RecordType.plant, Schema.RecordType.note, Schema.RecordType.photo]
+        for type in types {
+            let subscription = CKQuerySubscription(recordType: type,
+                                                   predicate: predicate,
+                                                   subscriptionID: type,
+                                                   options: options)
+            
+            subscription.notificationInfo = notificationInfo
+            privateDatabase.save(subscription) { record, error in
+                guard CloudKitError.shared.handle(error: error, operation: .modifySubscriptions) == nil else { return }
+                print("Save record subscription")
+            }
+        }
+
+        let dbSubscription = CKDatabaseSubscription(subscriptionID: CKSubscriptionIdentifiers.customZone)
         dbSubscription.notificationInfo = notificationInfo
         privateDatabase.save(dbSubscription) { record, error in
-            if let err = error {
-                print(err.localizedDescription)
-                return
-            }
+            guard CloudKitError.shared.handle(error: error, operation: .modifySubscriptions) == nil else { return }
             print("Save database subscription")
         }
         
-        let sharedSubscription = CKDatabaseSubscription(subscriptionID: CKIdentifiers.sharedHouse)
+        let sharedSubscription = CKDatabaseSubscription(subscriptionID: CKSubscriptionIdentifiers.sharedDatabase)
         sharedSubscription.notificationInfo = notificationInfo
         
         sharedDatabase.save(sharedSubscription) { record, error in
-            if let err = error {
-                print(err.localizedDescription)
-                return
-            }
+            guard CloudKitError.shared.handle(error: error, operation: .modifySubscriptions) == nil else { return }
             print("Save shared database subscription")
         }
 
     }
     
-    func save(_ house: House) {
-        let record = CKRecord(recordType: CKIdentifiers.house, zoneID: recordZone.zoneID)
-        record.setObject(house.address as CKRecordValue?, forKey: CKIdentifiers.address)
-        record.setObject(house.comments as CKRecordValue?, forKey: CKIdentifiers.comments)
+    func save(_ record: Record, onCompletion:@escaping ()->()) {
+        guard record.recordType != "" else { return }
+        let ckRecord = CKRecord(recordType: record.recordType, zoneID: recordZone.zoneID)
+        record.save(to: ckRecord)
         
-        if let url = house.photoURL {
-            let asset = CKAsset(fileURL: url)
-            record.setObject(asset, forKey: CKIdentifiers.photo)
-        }
-        
-        let modifyRecordsOperation = CKModifyRecordsOperation(recordsToSave: [record], recordIDsToDelete: nil)
+        let modifyRecordsOperation = CKModifyRecordsOperation(recordsToSave: [ckRecord], recordIDsToDelete: nil)
         
         if #available(iOS 11.0, *) {
             let config = CKOperationConfiguration()
@@ -152,89 +100,62 @@ class CloudKitSupport {
             modifyRecordsOperation.qualityOfService = .userInitiated
         }
         
-        
         modifyRecordsOperation.modifyRecordsCompletionBlock = { records, recordIDs, error in
-                if let err = error {
-                    print(err.localizedDescription)
-                } else {
-                    DispatchQueue.main.async {
-                        print("Record saved successfully")
-                    }
-                    self.currentRecord = record
-                }
+            guard CloudKitError.shared.handle(error: error, operation: .modifyRecords, affectedObjects: recordIDs) == nil else { return }
+            guard let records = records else { return }
+            guard records.count > 0 else { return }
+            record.update(with: records[0])
+            Records.shared.records.append(record)
+            onCompletion()
         }
         privateDatabase.add(modifyRecordsOperation)
     }
     
-    func update(_ house: House) {
-        guard let record = currentRecord else { return }
+    func update(_ record: Record) {
+        guard let ckRecord = record.ckRecord else { return }
         
-        let isShared = record.share != nil
-        let isOwner = record.recordID.zoneID.ownerName == CKCurrentUserDefaultName
+        let isShared = ckRecord.share != nil
+        let isOwner = ckRecord.recordID.zoneID.ownerName == CKCurrentUserDefaultName
         let database = (isShared && !isOwner) ? sharedDatabase : privateDatabase
-        record.setObject(house.address as CKRecordValue?, forKey: CKIdentifiers.address)
-        record.setObject(house.comments as CKRecordValue?, forKey: CKIdentifiers.comments)
         
-        if let url = house.photoURL {
-            let asset = CKAsset(fileURL: url)
-            record.setObject(asset, forKey: CKIdentifiers.photo)
-        }
+        record.save(to: ckRecord)
         
-        database.save(record) { record, error in
-            if let err = error {
-                print(err.localizedDescription)
-            } else {
-                DispatchQueue.main.async {
-                    print("Record saved successfully")
-                }
-                self.currentRecord = record
-            }
+        database.save(ckRecord) { savedRecord, error in
+            guard let savedRecord = savedRecord else { return }
+            guard CloudKitError.shared.handle(error: error, operation: .modifyRecords, affectedObjects: [savedRecord]) == nil else { return }
+            record.update(with: savedRecord)
         }
     }
     
-    func delete() {
-        guard let record = currentRecord else { return }
-        privateDatabase.delete(withRecordID: record.recordID) { record, error in
-            if let err = error {
-                print(err.localizedDescription)
-            } else {
-                DispatchQueue.main.async {
-                    print("Record saved successfully")
-                }
-                self.currentRecord = nil
-            }
+    func delete(record: Record) {
+        guard let ckRecord = record.ckRecord else { return }
+        privateDatabase.delete(withRecordID: ckRecord.recordID) { recordId, error in
+            guard let recordId = recordId else { return }
+            guard CloudKitError.shared.handle(error: error, operation: .deleteRecords, affectedObjects: [recordId]) == nil else { return }
+            record.ckRecord = nil
         }
     }
     
-    func query(address: String, onCompletion: @escaping (CKRecord)->()) {
-        let predicate = NSPredicate(format: "address = %@", address)
-        let query = CKQuery(recordType: CKIdentifiers.house, predicate: predicate)
+    func query(predicate: NSPredicate, onCompletion: @escaping (CKRecord)->()) {
+        //let predicate = NSPredicate(format: "address = %@", address)
+        let query = CKQuery(recordType: CKSubscriptionIdentifiers.privateDatabase, predicate: predicate)
         
         privateDatabase.perform(query, inZoneWith: recordZone.zoneID) { results, error in
-            if error != nil {
-                print(error!.localizedDescription)
-            } else {
-                guard let results = results else { return }
-                guard results.count > 0 else { return }
-                
-                let record = results[0]
-                self.currentRecord = record
-                onCompletion(record)
-            }
-        }
-        
-        guard let zid = sharedZone?.zoneID else { return }
-        sharedDatabase.perform(query, inZoneWith: zid) { results, error in
-            guard error == nil else {
-                print(error!.localizedDescription)
-                return
-            }
-            
+            guard CloudKitError.shared.handle(error: error, operation: .fetchRecords) == nil else { return }
             guard let results = results else { return }
             guard results.count > 0 else { return }
             
             let record = results[0]
-            self.currentRecord = record
+            onCompletion(record)
+        }
+        
+        guard let zid = sharedZone?.zoneID else { return }
+        sharedDatabase.perform(query, inZoneWith: zid) { results, error in
+            guard CloudKitError.shared.handle(error: error, operation: .fetchRecords) == nil else { return }
+            guard let results = results else { return }
+            guard results.count > 0 else { return }
+            
+            let record = results[0]
             onCompletion(record)
         }
     }
@@ -253,10 +174,7 @@ class CloudKitSupport {
         dbChanges.fetchAllChanges = true
         dbChanges.previousServerChangeToken = changeToken
         dbChanges.fetchDatabaseChangesCompletionBlock = { token, _, error in
-            if error != nil {
-                print(error!.localizedDescription)
-                //return
-            }
+            guard CloudKitError.shared.handle(error: error, operation: .fetchChanges) == nil else { return }
             self.changeToken = token
         }
         
@@ -265,17 +183,14 @@ class CloudKitSupport {
             options.previousServerChangeToken = self.recordChangeToken
             let zoneChanges = CKFetchRecordZoneChangesOperation(recordZoneIDs: [recordZoneId], optionsByRecordZoneID: [recordZoneId:options])
             zoneChanges.fetchRecordZoneChangesCompletionBlock = { error in
-                if error != nil {
-                    print(error!.localizedDescription)
-                    //return
-                }
+                guard CloudKitError.shared.handle(error: error, operation: .fetchChanges) == nil else { return }
             }
             zoneChanges.fetchAllChanges = false
             zoneChanges.recordZoneChangeTokensUpdatedBlock = { _, token, _ in
                 self.recordChangeToken = token
             }
-            zoneChanges.recordChangedBlock = { record in
-                self.currentRecord = record
+            zoneChanges.recordChangedBlock = { ckRecord in
+                self.addOrUpdate(ckRecord)
                 NotificationCenter.default.post(name: .onRecordFetchComplete, object: nil)
             }
             database.add(zoneChanges)
@@ -285,32 +200,53 @@ class CloudKitSupport {
     
     func fetchRecordZones(for database: CKDatabase, onCompletion: @escaping ([CKRecordZone])->()) {
         database.fetchAllRecordZones { (recordZones, error) in
-            if error != nil {
-                print(error!.localizedDescription)
-                return
-            }
-            
-            if let zones = recordZones {
-                onCompletion(zones)
-            }
+            guard CloudKitError.shared.handle(error: error, operation: .fetchZones) == nil else { return }
+            guard let zones = recordZones else { return }
+            onCompletion(zones)
         }
     }
     
     func fetch(for recordID: CKRecordID, shared: Bool) {
         let database = shared ? sharedDatabase : privateDatabase
         database.fetch(withRecordID: recordID) { record, error in
-            guard error == nil else {
-                print(error!.localizedDescription)
-                return
-            }
-            
-            self.currentRecord = record
+            guard CloudKitError.shared.handle(error: error, operation: .fetchRecords, affectedObjects: [recordID]) == nil else { return }
+            guard let record = record else { return }
+            self.addOrUpdate(record)
             NotificationCenter.default.post(name: .onRecordFetchComplete, object: nil)
         }
     }
     
     func fetchShare(for recordMetaData: CKShareMetadata) {
         fetch(for: recordMetaData.rootRecordID, shared: true)
+    }
+    
+    func fetchAllOwnedPlants(onFetchComplete: @escaping ([PlantRecord])->()) {
+        let query = CKQuery(recordType: Schema.RecordType.plant, predicate: NSPredicate(value: true))
+        privateDatabase.perform(query, inZoneWith: recordZone.zoneID) { records, error in
+            guard CloudKitError.shared.handle(error: error, operation: .fetchRecords) == nil else { return }
+            guard let records = records else { return }
+
+            let plants:[PlantRecord] = records.map {
+                let p = PlantRecord()
+                p.update(with: $0)
+                return p
+            }
+            onFetchComplete(plants)
+        }
+    }
+    
+    func addOrUpdate(_ item: CKRecord) {
+        if let record = Records.shared.record(for: item) {
+            record.update(with: item)
+        } else {
+            // TODO: check the type of the incoming record
+            if item.recordType == Schema.RecordType.plant {
+                let p = PlantRecord()
+                p.plant = Plant()
+                p.update(with: item)
+                Records.shared.records.append(p)
+            }
+        }
     }
     
     func acceptShare(for recordMetaData: CKShareMetadata) {
@@ -325,26 +261,23 @@ class CloudKitSupport {
         fetchShare(for: recordMetaData)
     }
     
-    func share(with vc: ViewController) {
+    func share(_ record: Record, with vc: ViewController) {
+        guard let ckRecord = record.ckRecord else { return }
         let controller = UICloudSharingController { controller, preparationCompletionHandler in
-            let share = CKShare(rootRecord: self.currentRecord!)
+            let share = CKShare(rootRecord: ckRecord)
             
-            share[CKShareTitleKey] = "An Amazing House" as CKRecordValue
+            share[CKShareTitleKey] = "An Amazing Plant" as CKRecordValue
             share.publicPermission = .readWrite
             
             let modifyRecordsOperation = CKModifyRecordsOperation(
-                recordsToSave: [self.currentRecord!, share],
+                recordsToSave: [ckRecord, share],
                 recordIDsToDelete: nil)
             
             modifyRecordsOperation.timeoutIntervalForRequest = 10
             modifyRecordsOperation.timeoutIntervalForResource = 10
             
-            modifyRecordsOperation.modifyRecordsCompletionBlock = {
-                records, recordIDs, error in
-                guard error == nil else {
-                    print(error!.localizedDescription)
-                    return
-                }
+            modifyRecordsOperation.modifyRecordsCompletionBlock = { _, _, error in
+                guard CloudKitError.shared.handle(error: error, operation: .fetchRecords) == nil else { return }
                 preparationCompletionHandler(share, self.container, error)
             }
             self.privateDatabase.add(modifyRecordsOperation)

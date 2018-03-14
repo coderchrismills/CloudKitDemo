@@ -15,6 +15,13 @@
 		837651F1204B7D3600E7B0EA /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 837651F0204B7D3600E7B0EA /* CloudKit.framework */; };
 		837651F3204B83E800E7B0EA /* CloudKitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651F2204B83E800E7B0EA /* CloudKitSupport.swift */; };
 		837651F5204BA13400E7B0EA /* UIImage+Save.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651F4204BA13400E7B0EA /* UIImage+Save.swift */; };
+		837651F72054EEEC00E7B0EA /* CloudKitError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651F62054EEEC00E7B0EA /* CloudKitError.swift */; };
+		837651F92054F41000E7B0EA /* PlantTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651F82054F41000E7B0EA /* PlantTableViewCell.swift */; };
+		837651FB2054F46B00E7B0EA /* PlantTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651FA2054F46B00E7B0EA /* PlantTableViewController.swift */; };
+		837651FD2054F49900E7B0EA /* Record.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651FC2054F49900E7B0EA /* Record.swift */; };
+		837651FF2055E1E500E7B0EA /* Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837651FE2055E1E500E7B0EA /* Records.swift */; };
+		83F3A18F2058A59A00E88C46 /* UIImage+CKAsset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F3A18E2058A59A00E88C46 /* UIImage+CKAsset.swift */; };
+		83F3A1912058A7EF00E88C46 /* UIImage+Resize.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F3A1902058A7EF00E88C46 /* UIImage+Resize.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +36,13 @@
 		837651F0204B7D3600E7B0EA /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		837651F2204B83E800E7B0EA /* CloudKitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSupport.swift; sourceTree = "<group>"; };
 		837651F4204BA13400E7B0EA /* UIImage+Save.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Save.swift"; sourceTree = "<group>"; };
+		837651F62054EEEC00E7B0EA /* CloudKitError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitError.swift; sourceTree = "<group>"; };
+		837651F82054F41000E7B0EA /* PlantTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantTableViewCell.swift; sourceTree = "<group>"; };
+		837651FA2054F46B00E7B0EA /* PlantTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantTableViewController.swift; sourceTree = "<group>"; };
+		837651FC2054F49900E7B0EA /* Record.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Record.swift; sourceTree = "<group>"; };
+		837651FE2055E1E500E7B0EA /* Records.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Records.swift; sourceTree = "<group>"; };
+		83F3A18E2058A59A00E88C46 /* UIImage+CKAsset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+CKAsset.swift"; sourceTree = "<group>"; };
+		83F3A1902058A7EF00E88C46 /* UIImage+Resize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Resize.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,13 +79,20 @@
 			children = (
 				837651EE204B7D3300E7B0EA /* CloudKitDemo.entitlements */,
 				837651DC204B7D2800E7B0EA /* AppDelegate.swift */,
+				837651FA2054F46B00E7B0EA /* PlantTableViewController.swift */,
+				837651F82054F41000E7B0EA /* PlantTableViewCell.swift */,
 				837651DE204B7D2800E7B0EA /* ViewController.swift */,
 				837651F2204B83E800E7B0EA /* CloudKitSupport.swift */,
+				837651F62054EEEC00E7B0EA /* CloudKitError.swift */,
 				837651F4204BA13400E7B0EA /* UIImage+Save.swift */,
+				83F3A18E2058A59A00E88C46 /* UIImage+CKAsset.swift */,
+				83F3A1902058A7EF00E88C46 /* UIImage+Resize.swift */,
+				837651FC2054F49900E7B0EA /* Record.swift */,
 				837651E0204B7D2800E7B0EA /* Main.storyboard */,
 				837651E3204B7D2800E7B0EA /* Assets.xcassets */,
 				837651E5204B7D2800E7B0EA /* LaunchScreen.storyboard */,
 				837651E8204B7D2800E7B0EA /* Info.plist */,
+				837651FE2055E1E500E7B0EA /* Records.swift */,
 			);
 			path = CloudKitDemo;
 			sourceTree = "<group>";
@@ -168,9 +189,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				837651F5204BA13400E7B0EA /* UIImage+Save.swift in Sources */,
+				837651F92054F41000E7B0EA /* PlantTableViewCell.swift in Sources */,
+				837651FB2054F46B00E7B0EA /* PlantTableViewController.swift in Sources */,
+				837651FF2055E1E500E7B0EA /* Records.swift in Sources */,
+				83F3A1912058A7EF00E88C46 /* UIImage+Resize.swift in Sources */,
 				837651F3204B83E800E7B0EA /* CloudKitSupport.swift in Sources */,
 				837651DF204B7D2800E7B0EA /* ViewController.swift in Sources */,
+				83F3A18F2058A59A00E88C46 /* UIImage+CKAsset.swift in Sources */,
 				837651DD204B7D2800E7B0EA /* AppDelegate.swift in Sources */,
+				837651FD2054F49900E7B0EA /* Record.swift in Sources */,
+				837651F72054EEEC00E7B0EA /* CloudKitError.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

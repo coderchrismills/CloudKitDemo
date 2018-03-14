@@ -11,15 +11,15 @@ import CloudKit
 import MobileCoreServices
 
 class ViewController: UIViewController {
-    @IBOutlet weak var addressField: UITextField!
-    @IBOutlet weak var commentsField: UITextView!
+    @IBOutlet weak var titleText: UITextField!
+    @IBOutlet weak var bodyText: UITextView!
     @IBOutlet weak var imageView: UIImageView!
     
-    var house: House = House()
+    var plantRecord = PlantRecord()
+    var noteRecord = NoteRecord()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        CloudKitSupport.shared.initialize()
         NotificationCenter.default.addObserver(self, selector: #selector(onFetchComplete), name: .onRecordFetchComplete, object: nil)
     }
     
@@ -28,32 +28,40 @@ class ViewController: UIViewController {
     }
     
     @objc func onFetchComplete() {
-        house.update(with: CloudKitSupport.shared.currentRecord)
         refreshView()
     }
     
     func refreshView() {
         DispatchQueue.main.async {
-            self.addressField.text = self.house.address
-            self.commentsField.text = self.house.comments
-            if let url = self.house.photoURL {
-                self.imageView.image = UIImage(contentsOfFile: url.path)
-            } else {
-                self.imageView.image = nil
-            }
+            guard let note = self.noteRecord.note else { return }
+            self.titleText.text = note.title
+            self.bodyText.text = note.body
+            self.imageView.image = nil
+            
+            guard note.images.count > 0 else { return }
+            guard let photoThumbData = note.images[0].photoThumbnailData else { return }
+            self.imageView.image = UIImage(data: photoThumbData)
         }
     }
     
     @IBAction func saveRecord(_ sender: Any) {
-        guard let addressText = addressField.text else { return }
-        house.address = addressText
-        CloudKitSupport.shared.save(house)
+        guard let title = titleText.text else { return }
+        if noteRecord.note == nil {
+            noteRecord.note = Note()
+            noteRecord.plantRecord = plantRecord
+        }
+        noteRecord.note?.title = title
+        noteRecord.note?.body = bodyText.text
+        CloudKitSupport.shared.save(noteRecord) {
+            self.refreshView()
+        }
     }
     
     @IBAction func queryRecord(_ sender: Any) {
-        guard let address = addressField.text else { return }
-        CloudKitSupport.shared.query(address: address) { record in
-            self.house.update(with: record)
+        guard let title = titleText.text else { return }
+        let predicate = NSPredicate(format: "name CONTAINS %@", title)
+        CloudKitSupport.shared.query(predicate: predicate) { record in
+            self.noteRecord.update(with: record)
             self.refreshView()
         }
     }
@@ -69,26 +77,27 @@ class ViewController: UIViewController {
     }
     
     @IBAction func updateRecord(_ sender: Any) {
-        guard let addressText = addressField.text else { return }
-        house.address = addressText
-        house.comments = commentsField.text
-        CloudKitSupport.shared.update(house)
+        guard let title = titleText.text else { return }
+        noteRecord.note?.title = title
+        noteRecord.note?.body = bodyText.text
+        CloudKitSupport.shared.update(noteRecord)
     }
     
     @IBAction func deleteRecord(_ sender: Any) {
-        CloudKitSupport.shared.delete()
-        addressField.text = ""
-        commentsField.text = ""
+        CloudKitSupport.shared.delete(record: noteRecord)
+        noteRecord = NoteRecord()
+        titleText.text = ""
+        bodyText.text = ""
         imageView.image = nil
     }
     
     @IBAction func shareRecord(_ sender: Any) {
-        CloudKitSupport.shared.share(with: self)
+        CloudKitSupport.shared.share(noteRecord, with: self)
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        addressField.endEditing(true)
-        commentsField.endEditing(true)
+        titleText.endEditing(true)
+        bodyText.endEditing(true)
     }
 }
 
@@ -97,7 +106,17 @@ extension ViewController: UIImagePickerControllerDelegate {
         self.dismiss(animated: true, completion: nil)
         let image = info[UIImagePickerControllerOriginalImage] as! UIImage
         imageView.image = image
-        house.photoURL = image.saveToFile()
+        
+        let imageData = UIImageJPEGRepresentation(image, 1.0) as Data?
+        let thumbnail = image.resizeImage(targetSize: CGSize(width: 100, height: 100))
+        let thumbnailData = UIImageJPEGRepresentation(thumbnail, 1.0) as Data?
+        
+        let photo = Photo()
+        photo.note = noteRecord.note
+        photo.photoData = imageData
+        photo.photoThumbnailData = thumbnailData
+        
+        noteRecord.note?.images.append(photo)
     }
     
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
