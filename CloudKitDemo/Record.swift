@@ -30,16 +30,26 @@ struct Schema {
     }
 }
 
-class Record {
+class Record: Equatable {
+    static func ==(lhs: Record, rhs: Record) -> Bool {
+        return lhs.uuid == rhs.uuid
+    }
+    
+    var uuid: String = ""
     var ckRecord: CKRecord?
     var isShared: Bool = false
     var recordType: String { get { return "" } }
+    
+    init() {
+        uuid = UUID().uuidString
+    }
     
     func update(with record: CKRecord?) { }
     func save(to record: CKRecord) { }
 }
 
 class Plant {
+    
     var name: String = ""
     var notes: [Note] = []
     

@@ -87,12 +87,12 @@
 				837651F4204BA13400E7B0EA /* UIImage+Save.swift */,
 				83F3A18E2058A59A00E88C46 /* UIImage+CKAsset.swift */,
 				83F3A1902058A7EF00E88C46 /* UIImage+Resize.swift */,
+				837651FE2055E1E500E7B0EA /* Records.swift */,
 				837651FC2054F49900E7B0EA /* Record.swift */,
 				837651E0204B7D2800E7B0EA /* Main.storyboard */,
 				837651E3204B7D2800E7B0EA /* Assets.xcassets */,
 				837651E5204B7D2800E7B0EA /* LaunchScreen.storyboard */,
 				837651E8204B7D2800E7B0EA /* Info.plist */,
-				837651FE2055E1E500E7B0EA /* Records.swift */,
 			);
 			path = CloudKitDemo;
 			sourceTree = "<group>";

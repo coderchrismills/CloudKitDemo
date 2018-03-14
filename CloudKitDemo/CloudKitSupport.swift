@@ -235,11 +235,26 @@ class CloudKitSupport {
         }
     }
     
+    func fetchAllSharedPlants(onFetchComplete: @escaping ([PlantRecord])->()) {
+        guard let sharedZone = self.sharedZone else { return }
+        let query = CKQuery(recordType: Schema.RecordType.plant, predicate: NSPredicate(value: true))
+        sharedDatabase.perform(query, inZoneWith: sharedZone.zoneID) { records, error in
+            guard CloudKitError.shared.handle(error: error, operation: .fetchRecords) == nil else { return }
+            guard let records = records else { return }
+            
+            let plants:[PlantRecord] = records.map {
+                let p = PlantRecord()
+                p.update(with: $0)
+                return p
+            }
+            onFetchComplete(plants)
+        }
+    }
+    
     func addOrUpdate(_ item: CKRecord) {
         if let record = Records.shared.record(for: item) {
             record.update(with: item)
         } else {
-            // TODO: check the type of the incoming record
             if item.recordType == Schema.RecordType.plant {
                 let p = PlantRecord()
                 p.plant = Plant()
@@ -261,7 +276,7 @@ class CloudKitSupport {
         fetchShare(for: recordMetaData)
     }
     
-    func share(_ record: Record, with vc: ViewController) {
+    func share(_ record: Record, with vc: UIViewController) {
         guard let ckRecord = record.ckRecord else { return }
         let controller = UICloudSharingController { controller, preparationCompletionHandler in
             let share = CKShare(rootRecord: ckRecord)

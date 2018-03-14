@@ -10,6 +10,13 @@ import CloudKit
 
 class Records {
     var records: [Record] = []
+    var plantRecords:[PlantRecord] {
+        get {
+            let plants = records.filter { $0.recordType == Schema.RecordType.plant }
+            return plants as! [PlantRecord]
+        }
+    }
+    
     static let shared = Records()
     private init() { }
     

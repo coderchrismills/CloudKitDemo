@@ -23,10 +23,16 @@ class PlantTableViewController: UITableViewController {
                 self.plants = records
                 self.refreshView()
             }
+            
+            CloudKitSupport.shared.fetchAllSharedPlants { records in
+                Records.shared.records = Records.shared.records + records
+                self.refreshView()
+            }
         }
     }
     
     @objc func onFetchComplete() {
+        self.plants = Records.shared.plantRecords
         refreshView()
     }
     
@@ -57,6 +63,19 @@ class PlantTableViewController: UITableViewController {
         self.present(alert, animated: true, completion: nil)
     }
     
+    func deleteItem(at indexPath: IndexPath) {
+        let plant = plants[indexPath.row]
+        tableView.beginUpdates()
+        
+        if let index = Records.shared.records.index(of: plant) {
+            Records.shared.records.remove(at: index)
+        }
+        
+        plants.remove(at: indexPath.row)
+        tableView.deleteRows(at: [indexPath], with: .fade)
+        tableView.endUpdates()
+    }
+    
     // MARK: - Table view data source
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 1
@@ -72,40 +91,20 @@ class PlantTableViewController: UITableViewController {
         return cell
     }
 
-    /*
-    // Override to support conditional editing of the table view.
-    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
+    override func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
+        let shareAction = UITableViewRowAction(style: .normal, title: "Share") { (action , indexPath ) -> Void in
+            let plant = self.plants[indexPath.row]
+            guard let plantName = plant.plant?.name else { return }
+            //let title = "Would you like to share \(plantName)"
+            CloudKitSupport.shared.share(plant, with: self)
+        }
+        
+        let deleteAction  = UITableViewRowAction(style: .default, title: "Delete") { (rowAction, indexPath) in
+            self.deleteItem(at: indexPath)
+        }
+        
+        return [shareAction, deleteAction]
     }
-    */
-
-    /*
-    // Override to support editing the table view.
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            // Delete the row from the data source
-            tableView.deleteRows(at: [indexPath], with: .fade)
-        } else if editingStyle == .insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-        }    
-    }
-    */
-
-    /*
-    // Override to support rearranging the table view.
-    override func tableView(_ tableView: UITableView, moveRowAt fromIndexPath: IndexPath, to: IndexPath) {
-
-    }
-    */
-
-    /*
-    // Override to support conditional rearranging of the table view.
-    override func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the item to be re-orderable.
-        return true
-    }
-    */
 
     // MARK: - Navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
